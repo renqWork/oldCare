@@ -5,7 +5,6 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const entryFiles = glob.sync(path.join(__dirname, "../src/views/*/index.js"));
-console.log(entryFiles);
 const entry = {}; //入口对象
 const htmlWebpackPlugins = []; //html-webpack-plugin设置集合
 
@@ -15,14 +14,14 @@ Object.keys(entryFiles).map((index) => {
   const match = entryFil.match(/src\/views\/(.*)\/index\.js/);
   const pathname = match && match[1];
   //设置入口对象
-  console.log(path.join(__dirname, `../src/views/${pathname}/index.html`));
   entry[pathname] = entryFil;
   //设置html-webpack-plugin设置
   htmlWebpackPlugins.push(
     new HtmlWebpackPlugin({
+      //https://github.com/jantimon/html-webpack-plugin#options
       filename: `${pathname}.html`,
       template: path.join(__dirname, `../src/views/${pathname}/index.html`),
-      // chunks: ["index"],
+      chunks: [pathname],
     })
   );
 });
@@ -89,7 +88,7 @@ module.exports = {
         use: {
           loader: "html-loader",
           options: {
-            attrs: ["img:src", "img:data-src", "audio:src"],
+            attributes: true,
             minimize: true,
           },
         },
