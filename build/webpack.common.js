@@ -4,9 +4,14 @@ const glob = require("glob");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const svgToMiniDataURI = require("mini-svg-data-uri");
+
 const entryFiles = glob.sync(path.join(__dirname, "../src/views/*/index.js"));
 const entry = {}; //入口对象
 const htmlWebpackPlugins = []; //html-webpack-plugin设置集合
+
+// Try the environment variable, otherwise use root
+const ASSET_PATH = process.env.ASSET_PATH || "/";
 
 Object.keys(entryFiles).map((index) => {
   const entryFil = entryFiles[index];
@@ -22,6 +27,7 @@ Object.keys(entryFiles).map((index) => {
       filename: `${pathname}.html`,
       template: path.join(__dirname, `../src/views/${pathname}/index.html`),
       chunks: [pathname],
+      inject: "body",
     })
   );
 });
@@ -30,6 +36,16 @@ module.exports = {
   context: path.join(__dirname, "../"),
   // 入口js路径
   entry,
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "../src"),
+      images: path.resolve(__dirname, "../src/images"),
+      components: path.resolve(__dirname, "../src/components"),
+      utils: path.resolve(__dirname, "../src/utils"),
+      icons: path.resolve(__dirname, "../src/icons"),
+      styles: path.resolve(__dirname, "../src/styles"),
+    },
+  },
   plugins: [
     new webpack.ProvidePlugin({
       $: "jquery",
@@ -41,18 +57,30 @@ module.exports = {
     }),
   ].concat(htmlWebpackPlugins),
   optimization: {
+    // minimize: false,
     splitChunks: {
       cacheGroups: {
-        commons: {
-          test: /jquery/,
-          name: "jquery",
+        vendor: {
+          //"vendor" key  chunk 的入口名称 路径
+          name: "vendor",
+          // name(module, chunks, cacheGroupKey) {
+          //   const moduleFileName = module
+          //     .identifier()
+          //     .split("\\")
+          //     .reduceRight((item) => item);
+          //   const allChunksNames = chunks.map((item) => item.name).join("~");
+          //   return `${cacheGroupKey}-${allChunksNames}-${moduleFileName}`;
+          // },
+          test: /[\\/]node_modules[\\/]/, //在node_modules范围内进行匹配
+          priority: 10, //优先级，先抽离公共的第三方库，再抽离业务代码，值越大优先级越高
           chunks: "all",
         },
-        styles: {
-          test: /[\\/]common[\\/].+\.css$/,
-          name: "style",
-          chunks: "all",
-          enforce: true,
+        commons: {
+          name: "commons", //分离出的公共模块的名字，如果没写就默认是上一层的名字
+          chunks: "all", //在哪些js范围内寻找公共模块，可以是src下的文件里，也可以是node_modules中的js文件
+          minChunks: 2, //当前公共模块出现的最少次数，
+          // enforce:true,
+          priority: 1, //优先级 默认 -20
         },
       },
     },
@@ -68,17 +96,19 @@ module.exports = {
         use: [MiniCssExtractPlugin.loader, "css-loader", "sass-loader"],
       },
       {
-        test: /\.(png|svg|jpg|gif|webp)$/,
+        test: /\.(png|jpg|jpeg|gif|webp)$/i,
+        type: "asset/resource",
+        generator: {
+          filename: "images/[hash][ext][query]",
+        },
+      },
+      {
+        test: /\.svg$/i,
         use: [
           {
             loader: "url-loader",
             options: {
-              // 最终生成的css代码中,图片url前缀
-              publicPath: "../images",
-              // 图片输出的实际路径(相对于dist)
-              outputPath: "images",
-              // 当小于某KB时转为base64
-              limit: 0,
+              generator: (content) => svgToMiniDataURI(content.toString()),
             },
           },
         ],
@@ -94,16 +124,8 @@ module.exports = {
         },
       },
       {
-        test: /\.(woff|woff2|eot|ttf|svg)$/,
-        use: {
-          loader: "file-loader",
-          options: {
-            // 保留原文件名和后缀名
-            name: "[name].[ext]",
-            // 输出到dist/fonts/目录
-            outputPath: "fonts",
-          },
-        },
+        test: /\.(woff|woff2|eot|ttf|otf)$/i,
+        type: "asset/resource",
       },
       {
         test: /\.m?js$/,
@@ -120,8 +142,10 @@ module.exports = {
 
   // 编译输出配置
   output: {
+    publicPath: ASSET_PATH,
     // js生成到dist/js，[name]表示保留原js文件名
     filename: "js/[name].[contenthash].bundle.js",
+    chunkFilename: "js/[name].[contenthash].js",
     // 输出路径为dist
     path: path.resolve(__dirname, "../dist"),
   },
