@@ -11,11 +11,16 @@ const devIp = "http://172.20.10.71:80/"; // 测试服务器
 // const devIp = "http://192.168.1.108:80/"; //戴梦璇电脑
 
 module.exports = merge(common, {
-  // 动态监测并实时更新页面
+  mode: "development",
   devServer: {
-    // contentBase: resolve("../dist"),
+    contentBase: "./",
     useLocalIp: true,
-    port: 5555,
+    open: true, // 自动打开浏览器
+    openPage: 'Home.html',
+    index: 'Home.html',
+    // can be overwritten by process.env.HOST
+    host: "0.0.0.0",
+    port: 5566,
     hot: true,
     stats: "errors-only",
     compress: true,
