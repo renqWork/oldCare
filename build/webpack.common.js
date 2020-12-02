@@ -1,10 +1,10 @@
 const path = require("path");
 const webpack = require("webpack");
 const glob = require("glob");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const svgToMiniDataURI = require("mini-svg-data-uri");
+const ESLintPlugin = require("eslint-webpack-plugin");
 
 const entryFiles = glob.sync(path.join(__dirname, "../src/views/*/index.js"));
 const entry = {}; //入口对象
@@ -52,9 +52,11 @@ module.exports = {
       $: "jquery",
       jQuery: "jquery",
     }),
-    new CleanWebpackPlugin(), // 自动清空dist目录
     new MiniCssExtractPlugin({
       filename: "css/[name].css",
+    }),
+    new ESLintPlugin({
+      emitError: true,
     }),
   ].concat(htmlWebpackPlugins),
   optimization: {
@@ -127,6 +129,9 @@ module.exports = {
       {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
         type: "asset/resource",
+        generator: {
+          filename: "font/[hash][ext][query]",
+        },
       },
       {
         test: /\.m?js$/,
